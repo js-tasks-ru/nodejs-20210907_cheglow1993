@@ -6,7 +6,6 @@ const LimitedSizeStream = require('./LimitSizeStream');
 
 const FILE_UPLOAD_LIMIT = 1024 * 1024;
 
-
 const server = new http.Server();
 
 server.on('request', (req, res) => {
