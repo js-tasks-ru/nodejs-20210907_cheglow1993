@@ -22,46 +22,46 @@ server.on('request', (req, res) => {
         return;
       }
 
-      if (fs.existsSync(filepath)) {
-        res.statusCode = 409;
-        res.end();
-        return;
-      }
-
       const limitedStream = new LimitedSizeStream({limit: FILE_UPLOAD_LIMIT});
       limitedStream.on('error', (err) => {
         switch (err.code) {
           case 'LIMIT_EXCEEDED':
-            fs.unlinkSync(filepath);
             res.statusCode = 413;
-            res.end();
+            res.end('file is too big');
           default:
             res.statusCode = 500;
             res.end();
         }
+
+        stream.destroy();
+        fs.unlink(filepath, () => {});
       });
 
-      const stream = fs.createWriteStream(filepath);
-      stream.once('open', () => {
-        req
-          .pipe(limitedStream)
-          .pipe(stream);
-
-        req.on('close', () => {
-          if (req.aborted) {
-            fs.unlinkSync(filepath);
-          }
-        });
-      });
-
+      const stream = fs.createWriteStream(filepath, { flags: 'wx' });
       stream.on('error', (err) => {
-        res.statusCode = 500;
-        res.end(err)
+        switch(err.code) {
+          case 'EEXIST':
+            res.statusCode = 409;
+            res.end('File exists');
+            break;
+          default:
+            res.statusCode = 500;
+            res.end(err);
+        }
       });
-
       stream.on('finish', () => {
         res.statusCode = 201;
         res.end();
+      });
+
+      req
+        .pipe(limitedStream)
+        .pipe(stream);
+
+      req.on('close', () => {
+        if (req.aborted) {
+          fs.unlink(filepath, () => {});
+        }
       });
       break;
     default:
