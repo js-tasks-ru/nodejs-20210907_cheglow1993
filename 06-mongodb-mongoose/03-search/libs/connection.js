@@ -8,4 +8,3 @@ module.exports = mongoose.createConnection(config.mongodb.uri, {
     useNewUrlParser: true,
     useUnifiedTopology: true,
 });
-
